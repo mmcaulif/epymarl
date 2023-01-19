@@ -9,6 +9,8 @@ EPyMARL is  an extension of [PyMARL](https://github.com/oxwhirl/pymarl), and inc
 
 See our blog post here: https://agents.inf.ed.ac.uk/blog/epymarl/
 
+Note: we have added an implementation of QPLEX based on the official paper implementation from this [repo](https://github.com/wjh720/QPLEX)
+
 # Table of Contents
 - [Extended Python MARL framework - EPyMARL](#extended-python-marl-framework---epymarl)
 - [Table of Contents](#table-of-contents)
