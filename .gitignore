@@ -245,4 +245,8 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
+3rdparty
+__MACOSX
+results
+
 # End of https://www.gitignore.io/api/linux,python,windows,pycharm+all,visualstudiocode
