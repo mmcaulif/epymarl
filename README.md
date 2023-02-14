@@ -13,6 +13,8 @@ To do list
 * compare learning rates: 0.0003 vs 0.0005 , can act as first proper experiment
 * compare target update rates: 100 vs 0 vs 0.01
 * test 2m_vs_1z traintime and hp's
+* create script for running training several times
+* decide on a fixed length for training, mayb 500k (roughly 45 minutes)
 
 Objectives
 ------------

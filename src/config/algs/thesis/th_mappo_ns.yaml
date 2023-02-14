@@ -37,5 +37,5 @@ name: "th_mappo_ns"
 
 log_interval: 12500
 test_interval: 2500
-t_max: 1000000
+t_max: 500000
 use_tensorboard: True
