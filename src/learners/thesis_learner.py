@@ -9,7 +9,7 @@ from modules.critics import REGISTRY as critic_resigtry
 from components.standarize_stream import RunningMeanStd
 
 
-class PPGLearner:
+class DISTILLearner:
     def __init__(self, mac, scheme, logger, args):
         self.args = args
         self.n_agents = args.n_agents
