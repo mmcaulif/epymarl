@@ -16,6 +16,10 @@ To do list
 * create script for running training several times
 * decide on a fixed length for training, mayb 500k (roughly 45 minutes)
 
+Done
+------------
+
+
 Objectives
 ------------
 
@@ -46,90 +50,4 @@ Results
 ------------
 to be completed
 
-Current hyperparams
-
-` {
-  "action_selector": "soft_policies",
-  "add_value_last_step": true,
-  "agent": "th_rnn_ns",
-  "agent_output_type": "pi_logits",
-  "batch_size": 10,
-  "batch_size_run": 10,
-  "buffer_cpu_only": true,
-  "buffer_size": 10,
-  "checkpoint_path": "",
-  "critic_type": "cv_critic",
-  "entropy_coef": 0.001,
-  "env": "sc2",
-  "env_args": {
-    "continuing_episode": false,
-    "debug": false,
-    "difficulty": "7",
-    "game_version": null,
-    "heuristic_ai": false,
-    "heuristic_rest": false,
-    "map_name": "3m",
-    "move_amount": 2,
-    "obs_all_health": true,
-    "obs_instead_of_state": false,
-    "obs_last_action": false,
-    "obs_own_health": true,
-    "obs_pathing_grid": false,
-    "obs_terrain_height": false,
-    "obs_timestep_number": false,
-    "replay_dir": "",
-    "replay_prefix": "",
-    "reward_death_value": 10,
-    "reward_defeat": 0,
-    "reward_negative_scale": 0.5,
-    "reward_only_positive": true,
-    "reward_scale": true,
-    "reward_scale_rate": 20,
-    "reward_sparse": false,
-    "reward_win": 200,
-    "seed": null,
-    "state_last_action": false,
-    "state_timestep_number": false,
-    "step_mul": 8
-  },
-  "epochs": 15,
-  "eps_clip": 0.2,
-  "evaluate": false,
-  "gamma": 0.99,
-  "grad_norm_clip": 10,
-  "hidden_dim": 64,
-  "hypergroup": null,
-  "label": "default_label",
-  "learner": "thesis_learner",
-  "learner_log_interval": 2500,
-  "load_step": 0,
-  "local_results_path": "results",
-  "log_interval": 12500,
-  "lr": 0.0005,
-  "mac": "non_shared_mac",
-  "mask_before_softmax": true,
-  "name": "th_mappo_distil_5e-4",
-  "obs_agent_id": false,
-  "obs_individual_obs": false,
-  "obs_last_action": false,
-  "optim_alpha": 0.99,
-  "optim_eps": 1e-05,
-  "q_nstep": 10,
-  "repeat_id": 1,
-  "runner": "parallel",
-  "runner_log_interval": 2500,
-  "save_model": false,
-  "save_model_interval": 50000,
-  "save_replay": false,
-  "seed": 892292116,
-  "standardise_returns": false,
-  "standardise_rewards": true,
-  "t_max": 1000000,
-  "target_update_interval_or_tau": 0,
-  "test_greedy": true,
-  "test_interval": 2500,
-  "test_nepisode": 100,
-  "use_cuda": true,
-  "use_rnn": true,
-  "use_tensorboard": true
-} `
+[Current hyperparams](src/config/algs/thesis/th_mappo_distil_a.yaml)
