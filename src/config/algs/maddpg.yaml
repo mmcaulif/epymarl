@@ -26,3 +26,6 @@ agent_output_type: "pi_logits"
 hidden_dim: 128
 critic_type: "maddpg_critic"
 name: "maddpg"
+
+log_interval: 2500
+test_interval: 2500
