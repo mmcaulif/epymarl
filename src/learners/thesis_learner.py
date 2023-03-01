@@ -4,6 +4,7 @@ from modules.critics.coma import COMACritic
 from modules.critics.centralV import CentralVCritic
 from utils.rl_utils import build_td_lambda_targets
 import torch as th
+import torch.nn.functional as F
 from torch.optim import Adam
 from modules.critics import REGISTRY as critic_resigtry
 from components.standarize_stream import RunningMeanStd
@@ -72,7 +73,7 @@ class DISTILLearner:
         old_pi_taken = th.gather(old_pi, dim=3, index=actions).squeeze(3)
         old_log_pi_taken = th.log(old_pi_taken + 1e-10)
 
-        for k in range(self.args.epochs):
+        for k in range(self.args.pi_epochs):
             mac_out = []
             self.mac.init_hidden(batch.batch_size)
             for t in range(batch.max_seq_length - 1):
@@ -81,8 +82,9 @@ class DISTILLearner:
             mac_out = th.stack(mac_out, dim=1)  # Concat over time
 
             pi = mac_out
-            advantages, critic_train_stats = self.train_critic_sequential(self.critic, self.target_critic, batch, rewards,
-                                                                          critic_mask)
+            advantages = self.get_advantages(self.critic, self.target_critic, batch, rewards, critic_mask)
+            # _, critic_train_stats = self.train_critic_sequential(self.critic, self.target_critic, batch, rewards, critic_mask)
+
             advantages = advantages.detach()
             # Calculate policy grad with mask
 
@@ -101,6 +103,58 @@ class DISTILLearner:
             # Optimise agents
             self.agent_optimiser.zero_grad()
             pg_loss.backward()
+            grad_norm = th.nn.utils.clip_grad_norm_(self.agent_params, self.args.grad_norm_clip)
+            self.agent_optimiser.step()
+
+        for k in range(self.args.v_epochs):
+            _, critic_train_stats = self.train_critic_sequential(self.critic, self.target_critic, batch, rewards, critic_mask)
+
+        # Get old policy for kl divergence
+        self.old_mac.load_state(self.mac)
+        pi_old = []
+        self.old_mac.init_hidden(batch.batch_size)
+        for t in range(batch.max_seq_length - 1):
+            agent_outs = self.old_mac.forward(batch, t=t)
+            pi_old.append(agent_outs)
+        pi_old = th.stack(pi_old, dim=1)
+        pi_old[mask == 0] = 1.0
+        pi_old_taken = th.gather(pi_old, dim=3, index=actions).squeeze(3)
+        log_pi_old_taken = th.log(pi_old_taken + 1e-10)
+
+        for k in range(self.args.aux_epochs):
+            if self.args.use_distil == False:
+                break
+
+            v_pi = []
+            mac_out = []
+            self.mac.init_hidden(batch.batch_size)
+            for t in range(batch.max_seq_length - 1):
+                agent_outs = self.mac.v_forward(batch, t=t)
+                mac_out.append(agent_outs[0])
+                v_pi.append(agent_outs[1])
+
+            v_pi = th.stack(v_pi, dim=1).squeeze(-1)
+            mac_out = th.stack(mac_out, dim=1)
+            v = self.critic(batch)[:, :-1].squeeze(3)
+            d_loss = (((v.detach() - v_pi) * critic_mask) ** 2).sum() / critic_mask.sum()
+
+
+            #kl loss
+            pi = mac_out
+            pi[mask == 0] = 1.0
+            pi_taken = th.gather(pi, dim=3, index=actions).squeeze(3)
+            log_pi_taken = th.log(pi_taken + 1e-10)
+
+            log_ratio = log_pi_taken - log_pi_old_taken.detach()
+            ratio = log_ratio.exp()
+            approx_kl = ((ratio - 1) - log_ratio)
+            masked_kl = (approx_kl * mask).sum() / mask.sum()
+            # print(f'epoch {k}: {masked_kl}')
+            
+            loss = (d_loss + masked_kl*self.args.distil_beta)
+
+            self.agent_optimiser.zero_grad()
+            loss.backward()
             grad_norm = th.nn.utils.clip_grad_norm_(self.agent_params, self.args.grad_norm_clip)
             self.agent_optimiser.step()
 
@@ -124,6 +178,25 @@ class DISTILLearner:
             self.logger.log_stat("agent_grad_norm", grad_norm.item(), t_env)
             self.logger.log_stat("pi_max", (pi.max(dim=-1)[0] * mask).sum().item() / mask.sum().item(), t_env)
             self.log_stats_t = t_env
+
+    def get_advantages(self, critic, target_critic, batch, rewards, mask):
+        # Get advantages
+        with th.no_grad():
+            target_vals = target_critic(batch)
+            target_vals = target_vals.squeeze(3)
+
+        if self.args.standardise_returns:
+            target_vals = target_vals * th.sqrt(self.ret_ms.var) + self.ret_ms.mean
+
+        target_returns = self.nstep_returns(rewards, mask, target_vals, self.args.q_nstep)
+        if self.args.standardise_returns:
+            self.ret_ms.update(target_returns)
+            target_returns = (target_returns - self.ret_ms.mean) / th.sqrt(self.ret_ms.var)
+
+        v = critic(batch)[:, :-1].squeeze(3)
+        td_error = (target_returns.detach() - v)
+        masked_td_error = td_error * mask
+        return masked_td_error
 
     def train_critic_sequential(self, critic, target_critic, batch, rewards, mask):
         # Optimise critic

@@ -1,11 +1,14 @@
+# --- MAPPO specific parameters ---
+# Can reach 100% winrate within 500k steps
+
 action_selector: "soft_policies"
 mask_before_softmax: True
 
 runner: "parallel"
 runner_log_interval: 2500 # how often the agent's are tested and metrics are logged
 
-buffer_size: 16
-batch_size_run: 10
+buffer_size: 10
+batch_size_run: 10  # num of env's
 batch_size: 10
 
 env_args:
@@ -34,12 +37,15 @@ critic_type: "cv_critic"
 
 pi_epochs: 10
 v_epochs: 10
-aux_epochs: 10
+aux_epochs: 3
+use_distil: True
+distil_beta: 1.0  # taken from DNA-PPO paper
 
 eps_clip: 0.2
-name: "th_mappo_distil_rollout16"
+name: "debug_20_aux_epochs_fixedKL"
 
 log_interval: 15000
 test_interval: 5000
-t_max: 500000
-use_tensorboard: True
+t_max: 10000
+# t_max: 500000
+# use_tensorboard: True

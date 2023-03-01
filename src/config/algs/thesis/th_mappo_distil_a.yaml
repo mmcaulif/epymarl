@@ -8,7 +8,7 @@ runner: "parallel"
 runner_log_interval: 2500 # how often the agent's are tested and metrics are logged
 
 buffer_size: 10
-batch_size_run: 10
+batch_size_run: 10  # num of env's
 batch_size: 10
 
 env_args:
@@ -34,9 +34,13 @@ standardise_returns: False
 standardise_rewards: True
 q_nstep: 10 # 1 corresponds to normal r + gammaV
 critic_type: "cv_critic"
-epochs: 15
+
+pi_epochs: 10
+v_epochs: 15
+aux_epochs: 10
+
 eps_clip: 0.2
-name: "th_mappo_distil_control"
+name: "th_mappo_distil_test4"
 
 log_interval: 15000
 test_interval: 5000

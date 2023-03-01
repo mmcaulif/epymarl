@@ -16,6 +16,16 @@ To do list
 * create script for running training several times
 * decide on a fixed length for training, mayb 500k (roughly 45 minutes)
 
+Tests
+------------
+* 1 Start to decouple policy and value into individual epochs by first separating advantage calculation and value loss function
+    - Results prove no negative effect on performance
+
+* 2 Continue from above, now create separate epochs, policy epoch first and then value epoch 
+
+* 3 Try different values for v_epochs
+
+
 Done
 ------------
 

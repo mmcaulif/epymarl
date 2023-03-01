@@ -32,6 +32,26 @@ class TH_RNNNSAgent(nn.Module):
                 hiddens.append(h.unsqueeze(1))
                 qs.append(q.unsqueeze(1))
             return th.cat(qs, dim=-1).view(-1, q.size(-1)), th.cat(hiddens, dim=1)
+        
+    def v_forward(self, inputs, hidden_state):
+        hiddens = []
+        qs = []
+        vs = []
+        if inputs.size(0) == self.n_agents:
+            for i in range(self.n_agents):
+                q, h, v = self.agents[i](inputs[i].unsqueeze(0), hidden_state[:, i])
+                hiddens.append(h)
+                vs.append(v)
+                qs.append(q)
+            return th.cat(qs), th.cat(vs), th.cat(hiddens).unsqueeze(0)
+        else:
+            for i in range(self.n_agents):
+                inputs = inputs.view(-1, self.n_agents, self.input_shape)
+                q, h, v = self.agents[i](inputs[:, i], hidden_state[:, i])
+                hiddens.append(h.unsqueeze(1))
+                vs.append(v.unsqueeze(1))
+                qs.append(q.unsqueeze(1))
+            return th.cat(qs, dim=-1).view(-1, q.size(-1)), th.cat(vs, dim=-1).view(-1, v.size(-1)), th.cat(hiddens, dim=1)
 
     def cuda(self, device="cuda:0"):
         for a in self.agents:

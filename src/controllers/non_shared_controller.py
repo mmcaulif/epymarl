@@ -36,6 +36,24 @@ class NonSharedMAC:
 
             agent_outs = th.nn.functional.softmax(agent_outs, dim=-1)
         return agent_outs.view(ep_batch.batch_size, self.n_agents, -1)
+    
+    def v_forward(self, ep_batch, t, test_mode=False):
+        agent_inputs = self._build_inputs(ep_batch, t)
+        avail_actions = ep_batch["avail_actions"][:, t]
+        policy_outs, v_outs, self.hidden_states = self.agent.v_forward(agent_inputs, self.hidden_states)
+
+        # Softmax the agent outputs if they're policy logits
+        if self.agent_output_type == "pi_logits":
+
+            if getattr(self.args, "mask_before_softmax", True):
+                # Make the logits for unavailable actions very negative to minimise their affect on the softmax
+                reshaped_avail_actions = avail_actions.reshape(ep_batch.batch_size * self.n_agents, -1)
+                policy_outs[reshaped_avail_actions == 0] = -1e10
+
+            policy_outs = th.nn.functional.softmax(policy_outs, dim=-1)
+
+        # print(agent_outs.view(ep_batch.batch_size, self.n_agents, -1).shape)
+        return policy_outs.view(ep_batch.batch_size, self.n_agents, -1), v_outs.view(ep_batch.batch_size, self.n_agents, -1)
 
     def init_hidden(self, batch_size):
         self.hidden_states = self.agent.init_hidden().unsqueeze(0).expand(batch_size, -1, -1)  # bav
