@@ -28,6 +28,9 @@ class DISTILLearner:
         self.critic_params = list(self.critic.parameters())
         self.critic_optimiser = Adam(params=self.critic_params, lr=args.lr)
 
+        self.use_huber_loss = args.use_huber_loss
+        self.huber_delta = 10.0
+
         self.last_target_update_step = 0
         self.critic_training_steps = 0
         self.log_stats_t = -self.args.learner_log_interval - 1
@@ -136,8 +139,14 @@ class DISTILLearner:
             v_pi = th.stack(v_pi, dim=1).squeeze(-1)
             mac_out = th.stack(mac_out, dim=1)
             v = self.critic(batch)[:, :-1].squeeze(3)
-            d_loss = (((v.detach() - v_pi) * critic_mask) ** 2).sum() / critic_mask.sum()
+            td_error = (v.detach() - v_pi)
+            masked_td_error = td_error * critic_mask
 
+            if self.use_huber_loss:
+                d_loss = self.huber_loss(masked_td_error, self.huber_delta).sum() / critic_mask.sum()
+
+            else:
+                d_loss = self.mse_loss(masked_td_error).sum() / critic_mask.sum()
 
             #kl loss
             pi = mac_out
@@ -208,6 +217,13 @@ class DISTILLearner:
             target_vals = target_vals * th.sqrt(self.ret_ms.var) + self.ret_ms.mean
 
         target_returns = self.nstep_returns(rewards, mask, target_vals, self.args.q_nstep)
+
+        # For debugging GAE purposes
+        # print(th.eq(self.nstep_returns(rewards, mask, target_vals, nsteps=1), self.gae(rewards, mask, target_vals)))
+        #self.nstep_returns(rewards, mask, target_vals, nsteps=1)
+        #self.gae(rewards, mask, target_vals)
+        # sys.exit()
+
         if self.args.standardise_returns:
             self.ret_ms.update(target_returns)
             target_returns = (target_returns - self.ret_ms.mean) / th.sqrt(self.ret_ms.var)
@@ -223,7 +239,11 @@ class DISTILLearner:
         v = critic(batch)[:, :-1].squeeze(3)
         td_error = (target_returns.detach() - v)
         masked_td_error = td_error * mask
-        loss = (masked_td_error ** 2).sum() / mask.sum()
+
+        if self.use_huber_loss:
+            loss = self.huber_loss(masked_td_error, self.huber_delta).sum() / mask.sum()
+        else:
+            loss = self.mse_loss(masked_td_error).sum() / mask.sum()
 
         self.critic_optimiser.zero_grad()
         loss.backward()
@@ -256,6 +276,52 @@ class DISTILLearner:
                     nstep_return_t += self.args.gamma ** (step) * rewards[:, t] * mask[:, t]
             nstep_values[:, t_start, :] = nstep_return_t
         return nstep_values
+    
+    def gae(self, rewards, mask, values, nsteps=1):
+        nstep_values = th.zeros_like(values[:, :-1])
+        for t_start in range(rewards.size(1)):
+            nstep_return_t = th.zeros_like(values[:, 0])
+            for step in range(nsteps + 1):
+                t = t_start + step
+
+                if step == nsteps:
+                    break
+
+                elif t == rewards.size(1) - 1 and self.args.add_value_last_step:
+                    print('(1)')
+                    nstep_return_t += self.args.gamma ** (step) * rewards[:, t] * mask[:, t]
+                    nstep_return_t += self.args.gamma ** (step + 1) * values[:, t + 1]
+                    break
+
+                else:
+                    print('(2)')
+                    nstep_return_t += rewards[:, t] * mask[:, t] + self.args.gamma * values[:, t+1] * mask[:, t+1]
+
+            nstep_values[:, t_start, :] = nstep_return_t
+
+        return nstep_values
+
+
+        """              
+
+        self.value_preds[-1] = next_value
+        gae = 0
+        returns = th.zeros_like(values[:, :-1])
+        for step in reversed(range(rewards.shape[0])):
+            delta = rewards[step] + self.gamma * values[step + 1] * self.masks[step + 1] - values[step]
+            gae = delta + self.gamma * self.gae_lambda * self.masks[step + 1] * gae
+            returns[step] = gae + values[step]
+        """
+
+        return nstep_values
+
+    def huber_loss(self, e, d):
+        a = (abs(e) <= d).float()
+        b = (abs(e) > d).float()
+        return a*e**2/2 + b*d*(abs(e)-d/2)
+
+    def mse_loss(self, e):
+        return e**2/2
 
     def _update_targets(self):
         self.target_critic.load_state_dict(self.critic.state_dict())

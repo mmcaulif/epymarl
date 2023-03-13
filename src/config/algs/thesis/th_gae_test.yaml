@@ -7,7 +7,7 @@ mask_before_softmax: True
 runner: "parallel"
 
 buffer_size: 10
-batch_size_run: 10  # num of env's
+batch_size_run: 3  # num of env's
 batch_size: 10
 
 env_args:
@@ -34,7 +34,7 @@ standardise_rewards: True
 q_nstep: 10 # 1 corresponds to normal r + gammaV
 critic_type: "cv_critic"  # "ac_critic" 
 # name: "debug_2svs1sc"
-name: debug_2c_vs_64zg # debug_2svs1sc_huber_5vepochs_4auxepochs_5e-4lr
+name: gae_test
 eps_clip: 0.2
 
 pi_epochs: 10
@@ -48,8 +48,7 @@ use_huber_loss: True
 runner_log_interval: 2500 # how often the agent's are tested and metrics are logged
 log_interval: 15000
 test_interval: 5000
-t_max: 10000
-t_max: 500000
-use_tensorboard: True
+t_max: 500
+use_tensorboard: False
 
 use_cuda: False
